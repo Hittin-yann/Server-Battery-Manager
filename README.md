@@ -1,12 +1,12 @@
 # 🔋 Server Battery & Thermal Manager (Shelly Gen 3)
-Ce projet permet de transformer un PC portable sous Ubuntu Server en un nœud auto-géré. Il optimise la santé de la batterie (maintien à 75%), surveille la température CPU en temps réel (crucial pour l'usage capot fermé) et pilote une prise intelligente **Shelly Plug S Gen 3**.
+Ce projet permet de transformer une machine sous Ubuntu Server en un nœud auto-géré. Il optimise la santé de la batterie (maintien à 75%), surveille la température CPU en temps réel et pilote une prise intelligente **Shelly Plug S Gen 3**.
 
 ## 🚀 Points forts
 - **Calcul Dynamique de Charge** : Le temps de recharge est calculé précisément selon la formule physique $T = \frac{E}{P}$ (Énergie manquante / Puissance nette disponible).
 
 - **Mesure de Consommation Réelle** : Utilise la loi d'Ohm ($P=U×I$) via le kernel Linux pour obtenir les Watts exacts consommés par le PC, même pendant la recharge.
 
-- **Monitoring Thermique Précis** : Surveille le package CPU (`thermal_zone3`) avec alertes Discord.
+- **Sécurité Thermique "Deep Cool"** : Si le CPU dépasse **75°C**, le script éteint proprement le PC et programme son réveil automatique 30 minutes plus tard via `rtcwake`.
 
 - **Auto-nettoyage Discord** : Supprime automatiquement le message précédent pour garder un canal de log propre.
 
@@ -30,6 +30,10 @@ Ce projet permet de transformer un PC portable sous Ubuntu Server en un nœud au
 ```Bash
 pip install requests
 ```
+
+- **Permissions Sudoers** : Pour permettre l'extinction/réveil sans mot de passe :
+    - Tapez `sudo visudo`
+    - Ajoutez à la fin : `votre_utilisateur ALL=(ALL) NOPASSWD: /usr/sbin/rtcwake`.
 
 ## ⚙️ Configuration du Script
 Modifie les constantes au début du fichier `battery_manager.py` pour les adapter à ton matériel :
@@ -63,10 +67,13 @@ Le script ajuste la couleur de la LED circulaire de la prise Shelly selon l'éta
 | 31% - 50%  |	 🟠 Orange   | 	     🟠 Moyen      |
 | 51% - 74%  |    🟢 Vert    |      🟢 Optimal     |
 |    75% +	 |    ⚪ Off     |   ✅ Chargé / Repos |
+| SURCHAUFFE |   🟣 Magenta  |   Shutdown (30 min) |
 
 ## 📝 Maintenance
 - **Lecture Consommation** : Le script tente de lire `energy-rate` via upower, s'il est à 0 (cas fréquent en charge), il bascule sur le calcul `voltage_now * current_now` dans `/sys/class/power_supply/BAT0/`.
 
 - **Température** : La cible est `thermal_zone3` (x86_pkg_temp) pour refléter la chaleur réelle du cœur processeur.
+
+- **Test de réveil** : Pour tester la sécurité thermique manuellement : `sudo rtcwake -m off -s 60`. Le PC doit s'éteindre et se rallumer après une minute.
 
 - **Relais** : Le temps de charge est arrondi par pas de 5 minutes pour éviter l'usure prématurée du relais de la prise Shelly.
